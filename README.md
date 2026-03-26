@@ -6,6 +6,7 @@
 
 <br>
 
+[![IEEE](https://img.shields.io/badge/IEEE-Published-blue.svg)](https://ieeexplore.ieee.org/document/11283461)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg)](https://pytorch.org/)
@@ -24,7 +25,7 @@ Glasgow College, University of Electronic Science and Technology of China
 
 <br>
 
-| 📄 [Paper](#citation) | 🚀 [Quick Start](#quick-start) | 📊 [Results](#-experimental-results) | 🛠️ [Installation](#️-installation) |
+| 📄 [Paper](https://ieeexplore.ieee.org/document/11283461) | 🚀 [Quick Start](#quick-start) | 📊 [Results](#-experimental-results) | 🛠️ [Installation](#️-installation) |
 |:---:|:---:|:---:|:---:|
 
 </div>
@@ -555,7 +556,9 @@ If you find GCD useful in your research, please consider citing:
   title     = {Mitigating Hallucinations in Large Vision-Language Models
                via Grounded-Contrastive Decoding},
   author    = {Zhang, Zhiyun and Zhang, Haotian},
+  journal   = {IEEE},
   year      = {2024},
+  url       = {https://ieeexplore.ieee.org/document/11283461},
   note      = {Glasgow College, University of Electronic Science and
                Technology of China, Chengdu, China}
 }
