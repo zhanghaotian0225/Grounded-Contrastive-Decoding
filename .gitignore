@@ -57,3 +57,6 @@ wandb/
 
 # Claude Code local config
 .claude/
+
+# Paper PDF
+*.pdf
