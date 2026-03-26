@@ -1,0 +1,23 @@
+# Core deep-learning stack
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.37.0
+accelerate>=0.25.0
+
+# LLaVA (install from source: https://github.com/haotian-liu/LLaVA)
+# pip install git+https://github.com/haotian-liu/LLaVA.git
+
+# Vision
+Pillow>=9.0.0
+open_clip_torch>=2.20.0
+
+# Evaluation datasets
+datasets>=2.16.0
+
+# Utilities
+numpy>=1.24.0
+tqdm>=4.65.0
+sentencepiece>=0.1.99
+
+# Optional – quantisation
+# bitsandbytes>=0.41.0

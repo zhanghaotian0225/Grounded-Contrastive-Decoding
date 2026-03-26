@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Model weights & checkpoints (large binary files)
+*.pt
+*.pth
+*.bin
+*.safetensors
+checkpoints/
+weights/
+
+# Prototype files (can be large)
+prototypes/
+
+# Results & logs
+results/
+logs/
+*.log
+
+# Dataset directories (symlinks or large data)
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Wandb
+wandb/
+
+# Claude Code local config
+.claude/
