@@ -144,25 +144,19 @@ GCD operates in two complementary stages that work synergistically:
 
 **Goal:** Remove spurious visual-textual correlations *before* the LLM sees the features.
 
-We precompute a *confusion prototype dictionary* $\mathbf{D}_v$ offline. Each prototype $\mathbf{D}_v[c]$ is the centroid of projected visual embeddings for confusing category $c$ (e.g., common object co-occurrence patterns):
+We precompute a *confusion prototype dictionary* $D_v$ offline. Each prototype $D_v[c]$ is the centroid of projected visual embeddings for confusing category $c$ (e.g., common object co-occurrence patterns):
 
-```math
-\mathbf{D}_v[c] = \frac{1}{|S_c|}\sum_{i \in S_c} \text{OriginalProj}\left(f_v^{(i)}\right)
-\tag{1}
-```
+$$D_v[c] = \frac{1}{|S_c|}\sum_{i \in S_c} \mathrm{Proj}(f_v^{(i)}) \tag{1}$$
 
 During inference, we estimate and subtract the contribution of these prototypes using a lightweight cross-attention mechanism. Given:
 
-```math
-Q = W_q \cdot \text{OriginalProj}(f_v), \quad K = W_k \mathbf{D}_v^\top, \quad V = W_v \mathbf{D}_v^\top
-```
+$$Q = W_q \cdot \mathrm{Proj}(f_v),\quad K = W_k D_v^\top,\quad V = W_v D_v^\top$$
 
 the disentangled embedding is:
 
-```math
-v = \text{OriginalProj}(f_v) - \text{Softmax}\left(\frac{QK^\top}{\sqrt{d}}\right) V
-\tag{2}
-```
+$$v = \mathrm{Proj}(f_v) - \mathrm{Softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V \tag{2}$$
+
+> $\mathrm{Proj}(\cdot)$ denotes the MLP projector (OriginalProj in the paper).
 
 **Key properties:**
 - The prototype dictionary is **precomputed offline** — zero overhead per query
@@ -185,27 +179,21 @@ We maintain **three parallel decoding streams** and combine their logits:
   Text-only embedding v_text ──────► l_text(y_t) ─┘
 ```
 
-```math
-s_{\text{GCD}}(y_t) = (1+\beta)\,\ell_v(y_t) - \alpha\,\ell_{\text{neg}}(y_t) - \beta\,\ell_{\text{text}}(y_t)
-\tag{3}
-```
+$$s_{\mathrm{GCD}}(y_t) = (1+\beta)\,l_v(y_t) - \alpha\,l_{\mathrm{neg}}(y_t) - \beta\,l_{\mathrm{text}}(y_t) \tag{3}$$
 
 | Symbol | Source | Role |
 |:---:|:---|:---|
-| $\ell_v(y_t)$ | Disentangled visual embedding | **Amplified** — primary grounded signal |
-| $\ell_{\text{neg}}(y_t)$ | Noise-perturbed visual embedding | **Suppressed** — captures ungrounded patterns |
-| $\ell_{\text{text}}(y_t)$ | Text-only (no vision) | **Suppressed** — pure language prior |
+| $l_v(y_t)$ | Disentangled visual embedding | **Amplified** — primary grounded signal |
+| $l_{\mathrm{neg}}(y_t)$ | Noise-perturbed visual embedding | **Suppressed** — captures ungrounded patterns |
+| $l_{\mathrm{text}}(y_t)$ | Text-only (no vision) | **Suppressed** — pure language prior |
 | $\alpha = 0.5$ | — | Controls negative-context suppression strength |
 | $\beta = 0.3$ | — | Controls text-only suppression / visual amplification |
 
 **Adaptive KL-divergence scaling** prevents over-suppression. At each step, we measure how far the GCD distribution deviates from the base model distribution:
 
-```math
-\alpha \leftarrow \begin{cases} \alpha \cdot \dfrac{\tau}{\mathrm{KL}(p_{\text{GCD}} \| p_v)} & \text{if } \mathrm{KL}(p_{\text{GCD}} \| p_v) > \tau \\ \alpha & \text{otherwise} \end{cases}
-\tag{4}
-```
+$$\alpha \leftarrow \begin{cases} \alpha \cdot \dfrac{\tau}{\mathrm{KL}(p_{\mathrm{GCD}} \| p_v)} & \text{if } \mathrm{KL}(p_{\mathrm{GCD}} \| p_v) > \tau \\ \alpha & \text{otherwise} \end{cases} \tag{4}$$
 
-*(same update for $\beta$)*
+*(same update for* $\beta$*)*
 
 If the adjustment is too aggressive ($\mathrm{KL} > \tau$), parameters are damped proportionally. This dynamic mechanism **preserves language fluency** while enforcing visual grounding. KV-caching across auxiliary forward passes keeps the additional inference cost minimal.
 
