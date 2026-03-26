@@ -144,24 +144,30 @@ GCD operates in two complementary stages that work synergistically:
 
 **Goal:** Remove spurious visual-textual correlations *before* the LLM sees the features.
 
-We precompute a *confusion prototype dictionary* $D_v$ offline. Each prototype $D_v[c]$ is the centroid of projected visual embeddings for confusing category $c$ (e.g., common object co-occurrence patterns):
+We precompute a *confusion prototype dictionary* `D_v` offline. Each prototype `D_v[c]` is the centroid of projected visual embeddings for confusing category `c` (e.g., common object co-occurrence patterns):
 
-$$D_v[c] = \frac{1}{|S_c|}\sum_{i \in S_c} \mathrm{Proj}(f_v^{(i)}) \tag{1}$$
+```
+Eq. (1)   D_v[c]  =  (1 / |S_c|) · Σ_{i ∈ S_c}  Proj( f_v^(i) )
+```
 
-During inference, we estimate and subtract the contribution of these prototypes using a lightweight cross-attention mechanism. Given:
+> `Proj(·)` = MLP projector that maps CLIP features into the LLM embedding space.
 
-$$Q = W_q \cdot \mathrm{Proj}(f_v),\quad K = W_k D_v^\top,\quad V = W_v D_v^\top$$
+During inference, we subtract the spurious prototype contribution via a lightweight cross-attention. Define:
 
-the disentangled embedding is:
+```
+Q = Wq · Proj(fv),    K = Wk · Dv^T,    V = Wv · Dv^T
+```
 
-$$v = \mathrm{Proj}(f_v) - \mathrm{Softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V \tag{2}$$
+The disentangled embedding is then:
 
-> $\mathrm{Proj}(\cdot)$ denotes the MLP projector (OriginalProj in the paper).
+```
+Eq. (2)   v  =  Proj(fv)  −  Softmax( Q·K^T / √d ) · V
+```
 
 **Key properties:**
 - The prototype dictionary is **precomputed offline** — zero overhead per query
-- The three projection matrices ($W_q, W_k, W_v$) are **lightweight** (no new training required when used with frozen prototypes)
-- The subtraction operation is **exact and interpretable**: it directly removes the weighted contribution of known spurious patterns
+- The three projection matrices (`Wq`, `Wk`, `Wv`) are **lightweight** (no new training required when used with frozen prototypes)
+- The subtraction is **exact and interpretable**: it directly removes the weighted contribution of known spurious patterns
 
 ---
 
@@ -179,23 +185,29 @@ We maintain **three parallel decoding streams** and combine their logits:
   Text-only embedding v_text ──────► l_text(y_t) ─┘
 ```
 
-$$s_{\mathrm{GCD}}(y_t) = (1+\beta)\,l_v(y_t) - \alpha\,l_{\mathrm{neg}}(y_t) - \beta\,l_{\mathrm{text}}(y_t) \tag{3}$$
+```
+Eq. (3)   s_GCD(yt)  =  (1+β) · l_v(yt)  −  α · l_neg(yt)  −  β · l_text(yt)
+```
 
 | Symbol | Source | Role |
-|:---:|:---|:---|
-| $l_v(y_t)$ | Disentangled visual embedding | **Amplified** — primary grounded signal |
-| $l_{\mathrm{neg}}(y_t)$ | Noise-perturbed visual embedding | **Suppressed** — captures ungrounded patterns |
-| $l_{\mathrm{text}}(y_t)$ | Text-only (no vision) | **Suppressed** — pure language prior |
-| $\alpha = 0.5$ | — | Controls negative-context suppression strength |
-| $\beta = 0.3$ | — | Controls text-only suppression / visual amplification |
+|:---|:---|:---|
+| `l_v(yt)` | Disentangled visual embedding | **Amplified** — primary grounded signal |
+| `l_neg(yt)` | Noise-perturbed visual embedding | **Suppressed** — captures ungrounded patterns |
+| `l_text(yt)` | Text-only (no vision) | **Suppressed** — pure language prior |
+| `α = 0.5` | — | Controls negative-context suppression strength |
+| `β = 0.3` | — | Controls text-only suppression / visual amplification |
 
-**Adaptive KL-divergence scaling** prevents over-suppression. At each step, we measure how far the GCD distribution deviates from the base model distribution:
+**Adaptive KL-divergence scaling** prevents over-suppression. At each step, we measure how far the GCD distribution deviates from the base model:
 
-$$\alpha \leftarrow \begin{cases} \alpha \cdot \dfrac{\tau}{\mathrm{KL}(p_{\mathrm{GCD}} \| p_v)} & \text{if } \mathrm{KL}(p_{\mathrm{GCD}} \| p_v) > \tau \\ \alpha & \text{otherwise} \end{cases} \tag{4}$$
+```
+          ┌  α · τ / KL(p_GCD ‖ p_v)   if KL(p_GCD ‖ p_v) > τ
+Eq. (4)   α  ←  ─┤
+          └  α                          otherwise
+```
 
-*(same update for* $\beta$*)*
+*(same update applies to β)*
 
-If the adjustment is too aggressive ($\mathrm{KL} > \tau$), parameters are damped proportionally. This dynamic mechanism **preserves language fluency** while enforcing visual grounding. KV-caching across auxiliary forward passes keeps the additional inference cost minimal.
+If the adjustment is too aggressive (KL > τ), parameters are damped proportionally. This dynamic mechanism **preserves language fluency** while enforcing visual grounding. KV-caching across auxiliary forward passes keeps the additional inference cost minimal.
 
 ---
 
@@ -272,25 +284,25 @@ MMMU evaluates factual consistency and hallucination mitigation in multimodal ou
 
 We conduct controlled ablation studies to validate each hyperparameter. Results confirm that the default values are robustly optimal across all three benchmarks.
 
-#### Effect of $\alpha$ (negative-context suppression) — evaluated on MME
+#### Effect of `α` (negative-context suppression) — evaluated on MME
 
-| $\alpha$ | 0.1 | 0.3 | **0.5** | 0.7 | 0.9 |
+| `α` | 0.1 | 0.3 | **0.5** | 0.7 | 0.9 |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | MME Total | 1455.2 | 1483.6 | **1505.07** | 1499.1 | 1490.5 |
 
 <sub>Too small → under-suppresses hallucinations. Too large → penalises valid visual tokens.</sub>
 
-#### Effect of $\beta$ (text-only suppression / visual amplification) — evaluated on MM-Vet
+#### Effect of `β` (text-only suppression / visual amplification) — evaluated on MM-Vet
 
-| $\beta$ | 0.0 | 0.1 | **0.3** | 0.5 | 0.7 |
+| `β` | 0.0 | 0.1 | **0.3** | 0.5 | 0.7 |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | MM-Vet Total | 30.8 | 31.5 | **32.9** | 32.1 | 31.8 |
 
-<sub>$\beta = 0$ reverts to no visual amplification. Large $\beta$ over-emphasises visual tokens and slightly hurts fluency.</sub>
+<sub>`β = 0` reverts to no visual amplification. Large `β` over-emphasises visual tokens and slightly hurts fluency.</sub>
 
-#### Effect of $\tau$ (KL divergence threshold) — evaluated on MMMU
+#### Effect of `τ` (KL divergence threshold) — evaluated on MMMU
 
-| $\tau$ | 0.01 | 0.02 | **0.05** | 0.08 | 0.10 |
+| `τ` | 0.01 | 0.02 | **0.05** | 0.08 | 0.10 |
 |:---|:---:|:---:|:---:|:---:|:---:|
 | MMMU Score | 35.2 | 35.4 | **36.1** | 35.7 | 35.5 |
 
@@ -496,7 +508,7 @@ python run_eval.py \
 |:---|:---:|:---|
 | `--alpha` | `0.5` | Weight for negative-context logit suppression |
 | `--beta` | `0.3` | Weight for text-only logit suppression / visual amplification |
-| `--tau` | `0.05` | KL divergence threshold for adaptive $\alpha$/$\beta$ scaling |
+| `--tau` | `0.05` | KL divergence threshold for adaptive α/β scaling |
 | `--model-path` | `liuhaotian/llava-v1.5-7b` | HuggingFace model ID or local path |
 | `--prototypes` | `None` | Path to `.pt` prototype file (enables disentanglement) |
 | `--no-gcd` | `False` | Run vanilla decoding (for ablation) |
