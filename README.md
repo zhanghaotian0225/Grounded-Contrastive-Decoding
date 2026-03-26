@@ -145,15 +145,23 @@ GCD operates in two complementary stages that work synergistically:
 
 We precompute a *confusion prototype dictionary* $\mathbf{D}_v$ offline. Each prototype $\mathbf{D}_v[c]$ is the centroid of projected visual embeddings for confusing category $c$ (e.g., common object co-occurrence patterns):
 
-$$\mathbf{D}_v[c] = \frac{1}{|S_c|}\sum_{i \in S_c} \text{OriginalProj}\!\left(f_v^{(i)}\right) \tag{1}$$
+```math
+\mathbf{D}_v[c] = \frac{1}{|S_c|}\sum_{i \in S_c} \text{OriginalProj}\left(f_v^{(i)}\right)
+\tag{1}
+```
 
 During inference, we estimate and subtract the contribution of these prototypes using a lightweight cross-attention mechanism. Given:
 
-$$Q = W_q\,\text{OriginalProj}(f_v), \quad K = W_k\mathbf{D}_v^\top, \quad V = W_v\mathbf{D}_v^\top$$
+```math
+Q = W_q \cdot \text{OriginalProj}(f_v), \quad K = W_k \mathbf{D}_v^\top, \quad V = W_v \mathbf{D}_v^\top
+```
 
 the disentangled embedding is:
 
-$$v = \text{OriginalProj}(f_v) - \text{Softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V \tag{2}$$
+```math
+v = \text{OriginalProj}(f_v) - \text{Softmax}\left(\frac{QK^\top}{\sqrt{d}}\right) V
+\tag{2}
+```
 
 **Key properties:**
 - The prototype dictionary is **precomputed offline** — zero overhead per query
@@ -176,7 +184,10 @@ We maintain **three parallel decoding streams** and combine their logits:
   Text-only embedding v_text ──────► l_text(y_t) ─┘
 ```
 
-$$s_{\text{GCD}}(y_t) = (1+\beta)\,\ell_v(y_t) - \alpha\,\ell_{\text{neg}}(y_t) - \beta\,\ell_{\text{text}}(y_t) \tag{3}$$
+```math
+s_{\text{GCD}}(y_t) = (1+\beta)\,\ell_v(y_t) - \alpha\,\ell_{\text{neg}}(y_t) - \beta\,\ell_{\text{text}}(y_t)
+\tag{3}
+```
 
 | Symbol | Source | Role |
 |:---:|:---|:---|
@@ -188,7 +199,10 @@ $$s_{\text{GCD}}(y_t) = (1+\beta)\,\ell_v(y_t) - \alpha\,\ell_{\text{neg}}(y_t) 
 
 **Adaptive KL-divergence scaling** prevents over-suppression. At each step, we measure how far the GCD distribution deviates from the base model distribution:
 
-$$\alpha \leftarrow \begin{cases} \alpha \cdot \dfrac{\tau}{\mathrm{KL}(p_{\text{GCD}}\,\|\,p_v)} & \text{if } \mathrm{KL}(p_{\text{GCD}}\,\|\,p_v) > \tau \\ \alpha & \text{otherwise} \end{cases} \tag{4}$$
+```math
+\alpha \leftarrow \begin{cases} \alpha \cdot \dfrac{\tau}{\mathrm{KL}(p_{\text{GCD}} \| p_v)} & \text{if } \mathrm{KL}(p_{\text{GCD}} \| p_v) > \tau \\ \alpha & \text{otherwise} \end{cases}
+\tag{4}
+```
 
 *(same update for $\beta$)*
 
